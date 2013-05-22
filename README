@@ -1,0 +1,3 @@
+Schedule tickets (bugs, enhancements, etc.) based on tickets available, number of hours required for each and developer experience with the work to be done on the tasks.
+
+Developer experience will be calculated based on commit logs.
