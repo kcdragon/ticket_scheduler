@@ -1,0 +1,14 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    bson (1.8.6)
+    hpricot (0.8.6)
+    mongo (1.8.6)
+      bson (~> 1.8.6)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  hpricot (>= 0.8.6)
+  mongo (>= 1.8.6)
