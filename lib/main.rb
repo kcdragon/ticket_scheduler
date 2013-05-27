@@ -6,6 +6,7 @@ require 'optparse'
 require_relative 'logger'
 require_relative 'parser'
 require_relative 'generate_authors_collection'
+require_relative 'generate_paths_collection'
 
 include Mongo
 
@@ -76,6 +77,12 @@ end
 
 gen = GenerateAuthorsCollection.new db
 opts = {:out => {:replace => 'authors'}} # send output to db
+#opts = {:out => {:inline => true}, :raw => true} # send output to standard output
+
+gen.generate_paths opts
+
+gen = GeneratePathsCollection.new db
+opts = {:out => {:replace => 'paths'}} # send output to db
 #opts = {:out => {:inline => true}, :raw => true} # send output to standard output
 
 gen.generate_paths opts

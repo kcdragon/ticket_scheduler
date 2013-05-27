@@ -2,6 +2,7 @@ require 'test/unit'
 require 'mongo'
 
 require_relative '../lib/generate_authors_collection.rb'
+require_relative '../lib/generate_paths_collection.rb'
 
 class GenerateTest < Test::Unit::TestCase
   def test_generate_authors
@@ -15,6 +16,7 @@ class GenerateTest < Test::Unit::TestCase
     c4 = db['commits'].insert get_commit_doc('bob', 'foo/two.rb', 'foo/three.rb')
     c5 = db['commits'].insert get_commit_doc('bob', 'foo/three.rb', 'foo/four.rb')
 
+    # commit collection tests
     commits = db.collection('commits')
     
     assert_equal 5, commits.count, 'there are not 5 total commits'
@@ -26,6 +28,8 @@ class GenerateTest < Test::Unit::TestCase
     assert commit["paths"].count == 2, 'commit should have 2 paths'
     assert commit["paths"][0] == 'foo/one.rb', 'first path in commit should be foo/one.rb'
     
+
+    # author collection tests
     gen = GenerateAuthorsCollection.new db
     gen.generate_paths({:out => 'authors'})
     authors = db.collection('authors')
@@ -40,6 +44,35 @@ class GenerateTest < Test::Unit::TestCase
     
     bob = authors.find_one({_id: 'bob'})
     assert_equal 3, bob['value']['paths'].length, 'bob should have 3 paths'
+
+    
+    # path collection tests
+    gen = GeneratePathsCollection.new db
+    gen.generate_paths({:out => 'paths'})
+    paths = db.collection('paths')
+
+    assert_equal 4, paths.count
+    path_exists = lambda do |id|
+      assert_equal 1, paths.find({_id: id}).count, "#{id} must exist in paths"
+    end
+    path_exists.call 'foo/one.rb'
+    path_exists.call 'foo/two.rb'
+    path_exists.call 'foo/three.rb'
+    path_exists.call 'foo/four.rb'
+
+    path_has_n_authors = lambda do |id, n, author|
+      path = paths.find_one({_id: id})
+      assert_not_nil(entry = path['value']['authors'].find { |a| a['author'] == author }, "#{id} should be commtied by #{author}")
+      assert_equal n, entry['author_commits'], "#{id} should be commtied #{n} times by #{author}"
+    end
+
+    path_has_n_authors.call 'foo/one.rb', 3, 'mike'
+    path_has_n_authors.call 'foo/two.rb', 1, 'mike'
+    path_has_n_authors.call 'foo/three.rb', 2, 'mike'
+
+    path_has_n_authors.call 'foo/two.rb', 1, 'bob'
+    path_has_n_authors.call 'foo/three.rb', 2, 'bob'
+    path_has_n_authors.call 'foo/four.rb', 1, 'bob'
 
     client.drop_database 'test'
     client.close
