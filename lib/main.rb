@@ -5,6 +5,7 @@ require 'mongo'
 require 'optparse'
 require_relative 'logger'
 require_relative 'parser'
+require_relative 'generate_authors_collection'
 
 include Mongo
 
@@ -31,6 +32,11 @@ optparse = OptionParser.new do |opts|
     Dir.chdir wd
   end
 
+  options[:skip] = false
+  opts.on('-s', '--skip-data', 'Skip generation of data') do
+    options[:skip] = true
+  end
+
   options[:verbose] = false
   opts.on('-v', '--verbose', 'Verbose mode') do
     options[:verbose] = true
@@ -43,23 +49,35 @@ optparse.parse!
 paths = ARGV
 
 client = MongoClient.new 'localhost', 27017
-client.drop_database options[:name]
+client.drop_database options[:name] if not options[:skip]
 db = client.db options[:name]
 
-log_command = nil
-if options[:type] == :git
-  log_command = lambda { |file| '<log>' + `git log --pretty=format:"<logentry revision='%h'><author>%an</author><date>%cd</date><msg>%s</msg></logentry>" #{file}` + '</log>' }
+if not options[:skip]
+  log_command = nil
+  if options[:type] == :git
+    log_command = lambda { |file| '<log>' + `git log --pretty=format:"<logentry revision='%h'><author>%an</author><date>%cd</date><msg>%s</msg></logentry>" #{file}` + '</log>' }
+  else
+    log_command = lambda { |file| `svn log --xml #{file}` }
+  end
+
+  #log_command = lambda { |file| `svn log --xml #{file}` }
+  logger = Logger.new log_command, options[:include], options[:verbose]
+  parser = Parser.new options[:verbose]
+  logger.process *paths do |path, content|
+    parser.parse path, content do |revision, commit|
+      db['commits'].insert(commit) if db['commits'].find_one({:revision => revision}).nil?
+      db['commits'].update({:revision => revision}, {'$push' => {:paths => path}})
+      db['commits'].update({:revision => revision}, {'$inc' => {:paths_size => 1}})
+    end
+  end
 else
-  log_command = lambda { |file| `svn log --xml #{file}` }
+  puts 'skipping generation of commits data' if options[:verbose]
 end
 
-#log_command = lambda { |file| `svn log --xml #{file}` }
-logger = Logger.new log_command, options[:include], options[:verbose]
-parser = Parser.new options[:verbose]
-logger.process *paths do |path, content|
-  parser.parse path, content do |revision, commit|
-    db['commits'].insert(commit) if db['commits'].find_one({:revision => revision}).nil?
-    db['commits'].update({:revision => revision}, {'$push' => {:paths => path}})
-    db['commits'].update({:revision => revision}, {'$inc' => {:paths_size => 1}})
-  end
-end
+gen = GenerateAuthorsCollection.new db
+opts = {:out => {:replace => 'authors'}} # send output to db
+#opts = {:out => {:inline => true}, :raw => true} # send output to standard output
+
+gen.generate_paths opts
+
+client.close

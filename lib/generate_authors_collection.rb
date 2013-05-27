@@ -1,5 +1,7 @@
 require 'mongo'
 
+class GenerateAuthorsCollection
+
 MAP = <<-MAP
   function() {
     for (var i in this.paths) {
@@ -30,19 +32,25 @@ REDUCE = <<-REDUCE
     return result;
   }
 REDUCE
+  
+  def initialize db
+    @db = db
+  end
 
-def generate_paths db, opts
-  return db['commits'].map_reduce MAP, REDUCE, opts
+  def generate_paths opts
+    return @db['commits'].map_reduce MAP, REDUCE, opts
+  end
+
 end
 
-conn = Mongo::Connection.new 'localhost', 27017 # TODO setup config file
-db = conn['redmine'] # TODO this should reference -name argument in main,rb
+#conn = Mongo::Connection.new 'localhost', 27017 # TODO setup config file
+#db = conn['redmine'] # TODO this should reference -name argument in main,rb
 
 # TODO REFACTOR need to make output location (stdout or db) a command line argument
 #opts = {:out => {:replace => 'authors'}} # send output to db
-opts = {:out => {:inline => true}, :raw => true} # send output to standard output
+#opts = {:out => {:inline => true}, :raw => true} # send output to standard output
 #paths = db['commits'].map_reduce map, reduce, opts
-paths = generate_paths db, opts
-puts paths.to_a
+#paths = generate_paths db, opts
+#puts paths.to_a
 
-conn.close
+#conn.close
