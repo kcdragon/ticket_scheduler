@@ -5,8 +5,7 @@ require 'mongo'
 require 'optparse'
 require_relative 'logger'
 require_relative 'parser'
-require_relative 'generate_authors_collection'
-require_relative 'generate_paths_collection'
+require_relative 'generator'
 
 include Mongo
 
@@ -75,16 +74,14 @@ else
   puts 'skipping generation of commits data' if options[:verbose]
 end
 
-gen = GenerateAuthorsCollection.new db
+gen = Generator.new db
+
 opts = {:out => {:replace => 'authors'}} # send output to db
-#opts = {:out => {:inline => true}, :raw => true} # send output to standard output
+#opts = {:out => {:inline => true}, :raw => true} # send output to standard output=
+gen.generate :author, opts
 
-gen.generate_paths opts
-
-gen = GeneratePathsCollection.new db
 opts = {:out => {:replace => 'paths'}} # send output to db
 #opts = {:out => {:inline => true}, :raw => true} # send output to standard output
-
-gen.generate_paths opts
+gen.generate :path, opts
 
 client.close

@@ -1,8 +1,7 @@
 require 'test/unit'
 require 'mongo'
 
-require_relative '../lib/generate_authors_collection.rb'
-require_relative '../lib/generate_paths_collection.rb'
+require_relative '../lib/generator.rb'
 
 class GenerateTest < Test::Unit::TestCase
   def test_generate_authors
@@ -29,9 +28,10 @@ class GenerateTest < Test::Unit::TestCase
     assert commit["paths"][0] == 'foo/one.rb', 'first path in commit should be foo/one.rb'
     
 
+    gen = Generator.new db
+
     # author collection tests
-    gen = GenerateAuthorsCollection.new db
-    gen.generate_paths({:out => 'authors'})
+    gen.generate :author, {:out => 'authors'}
     authors = db.collection('authors')
 
     assert_equal 2, authors.count
@@ -39,7 +39,7 @@ class GenerateTest < Test::Unit::TestCase
     assert_equal 1, authors.find({_id: 'bob'}).count, 'bob has paths'
     
     mike = authors.find_one({_id: 'mike'})
-    assert_not_nil(entry = mike['value']['paths'].find { |p| p['path'] == 'foo/one.rb' }, 'mike has commtied foo/one.rb')
+    assert_not_nil(entry = mike['value']['paths'].find { |p| p['path'] == 'foo/one.rb' }, 'mike has commited foo/one.rb')
     assert_equal 3, entry['path_commits'], 'mike should have commited foo/one.rb three times'
     
     bob = authors.find_one({_id: 'bob'})
@@ -47,8 +47,7 @@ class GenerateTest < Test::Unit::TestCase
 
     
     # path collection tests
-    gen = GeneratePathsCollection.new db
-    gen.generate_paths({:out => 'paths'})
+    gen.generate :path, {:out => 'paths'}
     paths = db.collection('paths')
 
     assert_equal 4, paths.count
