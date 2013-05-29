@@ -1,0 +1,24 @@
+one:
+  author: mike
+  paths: [foo/one.rb, foo/two.rb]
+  paths_size: 2
+
+two:
+  author: mike
+  paths: [foo/one.rb, foo/three.rb]
+  paths_size: 2
+
+three:
+  author: mike
+  paths: [foo/one.rb, foo/three.rb]
+  paths_size: 2
+
+four:
+  author: bob
+  paths: [foo/two.rb, foo/three.rb]
+  paths_size: 2
+
+five:
+  author: bob
+  paths: [foo/three.rb, foo/four.rb]
+  paths_size: 2

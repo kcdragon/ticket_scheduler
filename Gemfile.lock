@@ -1,10 +1,28 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    backports (2.6.7)
     bson (1.8.6)
+    descendants_tracker (0.0.1)
+    discoverer (0.0.2)
+      virtus
+    fast (0.1.4)
+      metafun (>= 0.2.0)
+      sub-setter (>= 0.0.2)
     hpricot (0.8.6)
+    metafun (0.2.0)
     mongo (1.8.6)
       bson (~> 1.8.6)
+    mongo-fixture (0.1.0)
+      fast
+      mongo
+      symbolmatrix
+    sub-setter (0.0.2)
+    symbolmatrix (1.2.0)
+      discoverer
+    virtus (0.5.4)
+      backports (~> 2.6.1)
+      descendants_tracker (~> 0.0.1)
 
 PLATFORMS
   ruby
@@ -12,3 +30,4 @@ PLATFORMS
 DEPENDENCIES
   hpricot (>= 0.8.6)
   mongo (>= 1.8.6)
+  mongo-fixture

@@ -1,5 +1,6 @@
 require 'test/unit'
 require 'mongo'
+require 'mongo-fixture'
 
 require_relative '../lib/generator.rb'
 
@@ -7,13 +8,9 @@ class GenerateTest < Test::Unit::TestCase
   def test_generate_authors
     client = Mongo::Connection.new 'localhost', 27017
     client.drop_database 'test'
-
     db = client.db('test')
-    c1 = db['commits'].insert get_commit_doc('mike', 'foo/one.rb', 'foo/two.rb')
-    c2 = db['commits'].insert get_commit_doc('mike', 'foo/one.rb', 'foo/three.rb')
-    c3 = db['commits'].insert get_commit_doc('mike', 'foo/one.rb', 'foo/three.rb')
-    c4 = db['commits'].insert get_commit_doc('bob', 'foo/two.rb', 'foo/three.rb')
-    c5 = db['commits'].insert get_commit_doc('bob', 'foo/three.rb', 'foo/four.rb')
+
+    fixtures = Mongo::Fixture.new(:commits, db)
 
     # commit collection tests
     commits = db.collection('commits')
@@ -22,7 +19,7 @@ class GenerateTest < Test::Unit::TestCase
     assert_equal 3, commits.find({author: 'mike'}).count, 'mike does not have 3 commtis'
     assert_equal 2, commits.find({author: 'bob'}).count, 'bob does noty have 2 commits'
 
-    commit = commits.find_one({_id: c1})
+    commit = fixtures.commits.one
     assert commit["author"] == 'mike', 'commit author name should be mike'
     assert commit["paths"].count == 2, 'commit should have 2 paths'
     assert commit["paths"][0] == 'foo/one.rb', 'first path in commit should be foo/one.rb'
