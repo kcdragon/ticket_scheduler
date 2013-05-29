@@ -39,11 +39,11 @@ class GenerateTest < Test::Unit::TestCase
     assert_equal 1, authors.find({_id: 'bob'}).count, 'bob has paths'
     
     mike = authors.find_one({_id: 'mike'})
-    assert_not_nil(entry = mike['value']['paths'].find { |p| p['path'] == 'foo/one.rb' }, 'mike has commited foo/one.rb')
+    assert_not_nil(entry = mike['paths'].find { |p| p['path'] == 'foo/one.rb' }, 'mike has commited foo/one.rb')
     assert_equal 3, entry['path_commits'], 'mike should have commited foo/one.rb three times'
     
     bob = authors.find_one({_id: 'bob'})
-    assert_equal 3, bob['value']['paths'].length, 'bob should have 3 paths'
+    assert_equal 3, bob['paths'].length, 'bob should have 3 paths'
 
     
     # path collection tests
@@ -61,7 +61,7 @@ class GenerateTest < Test::Unit::TestCase
 
     path_has_n_authors = lambda do |id, n, author|
       path = paths.find_one({_id: id})
-      assert_not_nil(entry = path['value']['authors'].find { |a| a['author'] == author }, "#{id} should be commtied by #{author}")
+      assert_not_nil(entry = path['authors'].find { |a| a['author'] == author }, "#{id} should be commtied by #{author}")
       assert_equal n, entry['author_commits'], "#{id} should be commtied #{n} times by #{author}"
     end
 

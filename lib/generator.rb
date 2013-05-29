@@ -1,5 +1,8 @@
 require 'mongo'
 
+# REFACTOR this should be a parent class with two child classes
+# parent would contain all the logic and children would contain factory methods such as get_singular(), get_plural(), etc.
+# this would remove the need for case statements and main.rb and generate_test.rb would simply instantiate a different class for each type of generation
 class Generator
   
   def initialize db
@@ -67,7 +70,28 @@ class Generator
   end
   
   def generate type, opts
-    return @db['commits'].map_reduce get_map(type), get_reduce(type), opts
+    @db['commits'].map_reduce get_map(type), get_reduce(type), opts
+    result = flatten_value_field type
+    return result
+  end
+
+private
+  # remove value embedded-document and make all keys in value embedded-document keys in the document
+  def flatten_value_field type
+    case type
+    when :path
+      coll = 'paths'
+      values = 'authors'
+    when :author
+      coll = 'authors'
+      values = 'paths'
+    else
+      raise "Invalid Type #{type}"
+    end
+    @db[coll].find.each do |e|
+      @db[coll].remove({_id: e['_id']})
+      @db[coll].insert({_id: e['_id'], 'total_commits' => e['value']['total_commits'], values => e['value'][values] })
+    end
   end
 
 end
