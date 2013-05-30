@@ -5,6 +5,7 @@ require 'mongo-fixture'
 require_relative '../lib/generator.rb'
 
 class GenerateTest < Test::Unit::TestCase
+  # TODO change name of test
   def test_generate_authors
     client = Mongo::Connection.new 'localhost', 27017
     client.drop_database 'test'
@@ -36,10 +37,12 @@ class GenerateTest < Test::Unit::TestCase
     assert_equal 1, authors.find({_id: 'bob'}).count, 'bob has paths'
     
     mike = authors.find_one({_id: 'mike'})
+    assert_equal 3, mike['total_commits']
     assert_not_nil(entry = mike['paths'].find { |p| p['path'] == 'foo/one.rb' }, 'mike has commited foo/one.rb')
     assert_equal 3, entry['path_commits'], 'mike should have commited foo/one.rb three times'
     
     bob = authors.find_one({_id: 'bob'})
+    assert_equal 2, bob['total_commits']
     assert_equal 3, bob['paths'].length, 'bob should have 3 paths'
 
     
@@ -48,13 +51,14 @@ class GenerateTest < Test::Unit::TestCase
     paths = db.collection('paths')
 
     assert_equal 4, paths.count
-    path_exists = lambda do |id|
+    path_exists = lambda do |id, total_commits|
       assert_equal 1, paths.find({_id: id}).count, "#{id} must exist in paths"
+      assert_equal total_commits, paths.find_one({_id: id})['total_commits']
     end
-    path_exists.call 'foo/one.rb'
-    path_exists.call 'foo/two.rb'
-    path_exists.call 'foo/three.rb'
-    path_exists.call 'foo/four.rb'
+    path_exists.call 'foo/one.rb', 3
+    path_exists.call 'foo/two.rb', 2
+    path_exists.call 'foo/three.rb', 4
+    path_exists.call 'foo/four.rb', 1
 
     path_has_n_authors = lambda do |id, n, author|
       path = paths.find_one({_id: id})

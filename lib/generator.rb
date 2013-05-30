@@ -16,10 +16,12 @@ class Generator
       key = 'this.paths[i]'
       value = 'this.author'
       singular = 'author'
+      total_commits = '1'
     when :author
       key = 'this.author'
       value = 'this.paths[i]'
       singular = 'path'
+      total_commits = '(i == 0 ? 1 : 0)' # when author is the key, we only want to emit once with a total_commit value
     else
       raise "Invalid Type #{type}"
     end
@@ -27,7 +29,7 @@ class Generator
     map = <<-MAP
       function() {
         for (var i in this.paths) {
-          emit(#{key}, { "total_commits": 1, "#{plural}": [{ "#{singular}" : #{value}, "#{singular}_commits": 1 }] });
+          emit(#{key}, { "total_commits": #{total_commits}, "#{plural}": [{ "#{singular}" : #{value}, "#{singular}_commits": 1 }] });
         }
       }
     MAP
