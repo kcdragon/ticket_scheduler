@@ -2,6 +2,7 @@ require 'test/unit'
 require 'mongo'
 require 'mongo-fixture'
 
+require_relative '../lib/db_connect.rb'
 require_relative '../lib/generator.rb'
 require_relative '../lib/metrics.rb'
 
@@ -20,9 +21,9 @@ class MetricTest < Test::Unit::TestCase
   }
   
   def test_metrics
-    client = Mongo::Connection.new 'localhost', 27017
+    client = TicketScheduler::DbConnect.instance
     client.drop_database 'test'
-    db = client.db('test')
+    db = client.set_database 'test'
 
     fixtures = Mongo::Fixture.new(:commits, db)
 

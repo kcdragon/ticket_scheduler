@@ -2,14 +2,14 @@ require 'test/unit'
 require 'mongo'
 require 'mongo-fixture'
 
+require_relative '../lib/db_connect.rb'
 require_relative '../lib/generator.rb'
 
 class GenerateTest < Test::Unit::TestCase
-  # TODO change name of test
-  def test_generate_authors
-    client = Mongo::Connection.new 'localhost', 27017
+  def test_generate
+    client = TicketScheduler::DbConnect.instance
     client.drop_database 'test'
-    db = client.db('test')
+    db = client.set_database 'test'
 
     fixtures = Mongo::Fixture.new(:commits, db)
 

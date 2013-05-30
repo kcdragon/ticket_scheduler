@@ -3,6 +3,7 @@
 require 'rubygems'
 require 'mongo'
 require 'optparse'
+require_relative 'db_connect'
 require_relative 'logger'
 require_relative 'parser'
 require_relative 'generator'
@@ -49,9 +50,9 @@ optparse.parse!
 
 paths = ARGV
 
-client = MongoClient.new 'localhost', 27017
+client = TicketScheduler::DbConnect.instance
 client.drop_database options[:name] if not options[:skip]
-db = client.db options[:name]
+db = client.set_database options[:name]
 
 if not options[:skip]
   log_command = nil
