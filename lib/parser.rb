@@ -1,7 +1,8 @@
 require 'hpricot'
 
 class Parser
-  def initialize verbose=false, out=$stdout, err=$stderr
+  def initialize date_parser, verbose=false, out=$stdout, err=$stderr
+    @date_parser = date_parser
     @verbose = verbose
     @out = out
     @err = err
@@ -20,8 +21,8 @@ class Parser
     end
   end
 
-  private
-  def parse_date_time t # svn - "2011-04-11T19:21:57.549455Z"
-    Time.utc t[0..3], t[5..6], t[8..9], t[11..12], t[14..15], t[17..18]
+private
+  def parse_date_time t
+    @date_parser.call(t)
   end
 end

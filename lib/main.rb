@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'rubygems'
+require 'date'
 require 'mongo'
 require 'optparse'
 require_relative 'db_connect'
@@ -16,9 +17,9 @@ optparse = OptionParser.new do |opts|
   opts.banner = 'Usage: main.rb [options] dir file ...'
 
   options[:type] = :svn
-  #opts.on('-t', '--type TYPE', [:svn, :git], 'Version Control System, currently supports SVN and Git') do |type|
-  #  options[:type] = type
-  #end
+  opts.on('-t', '--type TYPE', [:svn, :git], 'Version Control System, currently supports SVN and Git') do |type|
+    options[:type] = type
+  end
 
   options[:name] = 'default'
   opts.on('-n', '--name NAME', 'Name of Project') do |name|
@@ -57,14 +58,21 @@ db = client.set_database options[:name]
 if not options[:skip]
   log_command = nil
   if options[:type] == :git
-    log_command = lambda { |file| '<log>' + `git log --pretty=format:"<logentry revision='%h'><author>%an</author><date>%cd</date><msg>%s</msg></logentry>" #{file}` + '</log>' }
+    log_command = lambda do |file|
+      '<log>' + `git log --pretty=format:"<logentry revision='%h'><author>%an</author><date>%cd</date><msg>%s</msg></logentry>" #{file}` + '</log>'
+    end
+    date_parser = lambda do |t| # Fri Oct 21 12:10:27 2011 +0200      
+      Time.utc t[20..23], Date::ABBR_MONTHNAMES.index(t[4..6]), t[8..9], t[11..12], t[14..15], t[17..18]
+    end
   else
     log_command = lambda { |file| `svn log --xml #{file}` }
+    date_parser = lambda do |t| # "2011-04-11T19:21:57.549455Z"
+      Time.utc t[0..3], t[5..6], t[8..9], t[11..12], t[14..15], t[17..18]
+    end
   end
 
-  #log_command = lambda { |file| `svn log --xml #{file}` }
   logger = Logger.new log_command, options[:include], options[:verbose]
-  parser = Parser.new options[:verbose]
+  parser = Parser.new date_parser, options[:verbose]
   logger.process *paths do |path, content|
     parser.parse path, content do |revision, commit|
       db['commits'].insert(commit) if db['commits'].find_one({:revision => revision}).nil?
