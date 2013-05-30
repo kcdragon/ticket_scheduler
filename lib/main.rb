@@ -6,6 +6,7 @@ require 'optparse'
 require_relative 'logger'
 require_relative 'parser'
 require_relative 'generator'
+require_relative 'metrics'
 
 include Mongo
 
@@ -83,5 +84,8 @@ gen.generate :author, opts
 opts = {:out => {:replace => 'paths'}} # send output to db
 #opts = {:out => {:inline => true}, :raw => true} # send output to standard output
 gen.generate :path, opts
+
+metrics = Metrics.new db
+map = metrics.calculate_metrics
 
 client.close
