@@ -1,13 +1,12 @@
 require 'mongo'
 
+require_relative '../lib/models/author'
+require_relative '../lib/models/path'
+
 # REFACTOR this should be a parent class with two child classes
 # parent would contain all the logic and children would contain factory methods such as get_singular(), get_plural(), etc.
 # this would remove the need for case statements and main.rb and generate_test.rb would simply instantiate a different class for each type of generation
 class Generator
-  
-  def initialize db
-    @db = db
-  end
   
   # type: :path or :author
   def get_map type
@@ -72,9 +71,13 @@ class Generator
   end
   
   def generate type, opts
-    @db['commits'].map_reduce get_map(type), get_reduce(type), opts
-    result = flatten_value_field type
-    return result
+    output = type == :author ? 'authors_temp' : 'paths_temp'
+    embedded = type == :author ? 'paths' : 'authors'
+    coll = type == :author ? Author : Path
+    
+    Commit.map_reduce(get_map(type), get_reduce(type)).out(inline: 1).each do |hash|
+      coll.create({name: hash['_id'], total_commits: hash['value']['total_commits'], embedded => hash['value'][embedded] })
+    end
   end
 
 private
@@ -84,15 +87,24 @@ private
     when :path
       coll = 'paths'
       values = 'authors'
+      c = Path
     when :author
       coll = 'authors'
-      values = 'paths'
+      values = :paths
+      c = Author
     else
       raise "Invalid Type #{type}"
     end
-    @db[coll].find.each do |e|
-      @db[coll].remove({_id: e['_id']})
-      @db[coll].insert({_id: e['_id'], 'total_commits' => e['value']['total_commits'], values => e['value'][values] })
+    #@db[coll].find.each do |e|
+    #  @db[coll].remove({_id: e['_id']})
+    #  @db[coll].insert({_id: e['_id'], 'total_commits' => e['value']['total_commits'], values => e['value'][values] })
+    #end
+    db = c.collection.database # doesn't matter which Model we call collection from, we just need the database
+    puts db['authors_temp'].find.to_a
+    db['authors_temp'].find.each do |e|
+      puts e['_id']
+      db['authors_temp'].find('_id' => e['_id']).remove
+      c.create({_id: e['_id'], total_commits: e['value']['total_commits'], values => e['value'][values] })
     end
   end
 

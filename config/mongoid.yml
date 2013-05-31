@@ -1,0 +1,10 @@
+development:
+  sessions:
+    default:
+      database: redmine
+      hosts:
+        - localhost:27017
+    test:
+      database: test
+      hosts:
+        - localhost:27017

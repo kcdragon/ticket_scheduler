@@ -2,15 +2,16 @@
 
 require 'rubygems'
 require 'date'
-require 'mongo'
+require 'mongoid'
 require 'optparse'
-require_relative 'db_connect'
-require_relative 'logger'
+
+require_relative 'vc_logger'
 require_relative 'parser'
 require_relative 'generator'
 require_relative 'metrics'
-
-include Mongo
+require_relative 'models/commit'
+require_relative 'models/author'
+require_relative 'models/path'
 
 options = Hash.new
 optparse = OptionParser.new do |opts|
@@ -31,8 +32,9 @@ optparse = OptionParser.new do |opts|
     options[:include] = /#{regex}/i
   end
 
+  options[:wd] = '.'
   opts.on('-w', '--working-dir WD', 'Switch to working directory') do |wd|
-    Dir.chdir wd
+    options[:wd] = wd
   end
 
   options[:skip] = false
@@ -51,9 +53,14 @@ optparse.parse!
 
 paths = ARGV
 
-client = TicketScheduler::DbConnect.instance
-client.drop_database options[:name] if not options[:skip]
-db = client.set_database options[:name]
+config_file = File.dirname(File.expand_path(__FILE__)) + '/../config/mongoid.yml'
+settings = Mongoid.load!(config_file, :development)
+
+if not options[:skip]
+  Commit.delete_all
+  Author.delete_all
+  Path.delete_all
+end
 
 if not options[:skip]
   log_command = nil
@@ -71,30 +78,28 @@ if not options[:skip]
     end
   end
 
+  Dir.chdir options[:wd]
   logger = Logger.new log_command, options[:include], options[:verbose]
   parser = Parser.new date_parser, options[:verbose]
   logger.process *paths do |path, content|
     parser.parse path, content do |revision, commit|
-      db['commits'].insert(commit) if db['commits'].find_one({:revision => revision}).nil?
-      db['commits'].update({:revision => revision}, {'$push' => {:paths => path}})
-      db['commits'].update({:revision => revision}, {'$inc' => {:paths_size => 1}})
+      # TODO need to test this with some "fake" SVN and Git logs      
+      Commit.create(commit) if not Commit.where(revision: revision).exists?
+      Commit.where(revision: revision).push(:paths, path)
+      Commit.where(revision: revision).inc(:paths_size, 1)
     end
   end
 else
   puts 'skipping generation of commits data' if options[:verbose]
 end
 
-gen = Generator.new db
+gen = Generator.new
 
-opts = {:out => {:replace => 'authors'}} # send output to db
-#opts = {:out => {:inline => true}, :raw => true} # send output to standard output=
+opts = {:out => {:replace => 'authors'}}
 gen.generate :author, opts
 
-opts = {:out => {:replace => 'paths'}} # send output to db
-#opts = {:out => {:inline => true}, :raw => true} # send output to standard output
+opts = {:out => {:replace => 'paths'}}
 gen.generate :path, opts
 
-metrics = Metrics.new db
+metrics = Metrics.new
 map = metrics.calculate_metrics
-
-client.close

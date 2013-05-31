@@ -1,16 +1,13 @@
 require 'mongo'
 
 class Metrics  
-  def initialize db
-    @db = db
-  end
-
+  
   def calculate_metrics
     authors = []
-    @db['authors'].find({}, fields: {_id: 1}).each { |a| authors << a['_id'] }
+    Author.each { |a| authors << a.name }
     
     paths = []
-    @db['paths'].find({}, fields: {_id: 1}).each { |p| paths << p['_id'] }
+    Path.each { |p| paths << p.name }
 
     map = Hash.new # map [author, path] -> [metric1, metric2]
     authors.product(paths).each { |e| map[e] = [calculate_metric1(e[0], e[1]), calculate_metric2(e[0], e[1])] }
@@ -25,28 +22,30 @@ private
   # might be able to do this with factory method or some simple lambda functios
 
   # metric1 is defined as the percentage of author's commits that path was in
-  def calculate_metric1 author, path
-    authors = @db['authors']
-    author_commits = authors.find_one({_id: author}, fields: {_id: 0, 'total_commits' => 1})['total_commits']
-    author = authors.find_one({_id: author})
-    path = author['paths'].find {|p| p['path'] == path }
+  def calculate_metric1 author_name, path_name
+    authors = Author
+    author = authors.find(author_name)
+
+    path = nil
+    author.paths.each {|p| path = p if p.path == path_name }
     if path.nil? # path will be nil if author has never commited path
       return 0
     end
-    path_commits_for_author = path['path_commits']
-    return 1.0 * path_commits_for_author / author_commits
+    path_commits_for_author = path.path_commits
+    return 1.0 * path_commits_for_author / author.total_commits
   end
 
   # metric2 is defined as the percentage of all commits that path was in that author commited
-  def calculate_metric2 author, path
-    paths = @db['paths']
-    path_commits = paths.find_one({_id: path}, fields: {_id: 0, 'total_commits' => 1})['total_commits']
-    path = paths.find_one({_id: path})
-    author = path['authors'].find {|a| a['author'] == author }
+  def calculate_metric2 author_name, path_name
+    paths = Path
+    path = paths.find(path_name)
+
+    author = nil
+    path.authors.each {|a| author = a if a.author == author_name }
     if author.nil? # path will be nil if author has never commited path
       return 0
     end
-    author_commits_for_path = author['author_commits']
-    return 1.0 * author_commits_for_path / path_commits
+    author_commits_for_path = author.author_commits
+    return 1.0 * author_commits_for_path / path.total_commits
   end
 end

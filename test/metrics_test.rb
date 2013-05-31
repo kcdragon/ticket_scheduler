@@ -1,8 +1,7 @@
 require 'test/unit'
-require 'mongo'
-require 'mongo-fixture'
+require 'mongoid'
 
-require_relative '../lib/db_connect.rb'
+require_relative 'test_helper'
 require_relative '../lib/generator.rb'
 require_relative '../lib/metrics.rb'
 
@@ -21,23 +20,25 @@ class MetricTest < Test::Unit::TestCase
   }
   
   def test_metrics
-    client = TicketScheduler::DbConnect.instance
-    client.drop_database 'test'
-    db = client.set_database 'test'
+    config_file = File.dirname(File.expand_path(__FILE__)) + '/../config/mongoid.yml'
+    Mongoid.load!(config_file, :development)
+    Mongoid.connect_to('test')
+    
+    Commit.delete_all
+    Author.delete_all
+    Path.delete_all
+    
+    inserted = TestHelper.insert_commits
 
-    fixtures = Mongo::Fixture.new(:commits, db)
-
-    gen = Generator.new db
+    gen = Generator.new
     gen.generate :author, {:out => 'authors'}
     gen.generate :path, {:out => 'paths'}
 
-    metrics = Metrics.new db
+    metrics = Metrics.new
     metrics.calculate_metrics.each do |k, v|
       expected = EXPECTED[k]
       actual = v
       (0..1).each { |i| assert_in_delta expected[i], actual[i], DELTA }
     end
-
-    client.drop_database 'test'
   end
 end
